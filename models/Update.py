@@ -56,6 +56,7 @@ class LocalUpdate(object):
                 images, labels = images.to(self.args.device), temp.to(self.args.device)
                 net.zero_grad()
                 log_probs = net(images)  # predicted label
+                xxx = log_probs.data
                 log_probs = log_probs.squeeze(dim=-1)
                 loss = self.loss_func(log_probs, labels.float())
                 loss.backward()

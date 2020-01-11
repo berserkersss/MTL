@@ -49,6 +49,7 @@ if __name__ == '__main__':
         dict_users[k] = np.array(train_index[0].astype(int))
 
     net_glob = CNNMnist_MTL(args=args).to(args.device)
+    net_test = copy.deepcopy(net_glob)
     net_glob.train()
 
     w_cluster = [net_glob.state_dict() for i in range(len(num_img))]  # 存储FL后的w（Fm）
@@ -135,5 +136,16 @@ if __name__ == '__main__':
         for k in range(len(set_idx)):
             w_cluster[k] = FedAvg(w_cluster_temp[k])
 
+        print("iter=", iter)
         print(indicator_user)
-        print("iter=", iter, 'loss=', loss_locals)
+        for user in range(len(num_img)):
+            init_Fm = w_cluster[indicator_user[user]]
+            init_w = init_Fm
+            init_w['linear.weight'] = Lm_select[user]['linear.weight']
+            init_w['linear.bias'] = Lm_select[user]['linear.bias']
+            net_test.load_state_dict(init_w)
+            acc_test_fl2 = test_img(net_test, dataset_test, args, num_label[user])
+            print("user", user, "--Testing accuracy: {:.2f}".format(acc_test_fl2))
+            acc_train_fl_his2.append(acc_test_fl2)
+
+        # print("iter=", iter, 'loss=', loss_locals)

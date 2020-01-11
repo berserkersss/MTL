@@ -76,40 +76,40 @@ if __name__ == '__main__':
                 init_w['linear.bias'] = init_Lm['linear.bias']
                 if user not in indicator_cluster[cluster]:
                     # 构造大L矩阵
-                    Lm_user = init_Lm['linear.weight'].numpy()[0]
-                    Lm_list = [init_Lm['linear.weight']]
+                    # Lm_user = init_Lm['linear.weight'].numpy()[0]
+                    Lm_list = []
                     for i in indicator_cluster[cluster]:
-                        Lm_user = np.vstack((Lm_user, Lm_select[i]['linear.weight'].numpy()[0]))
+                        # Lm_user = np.vstack((Lm_user, Lm_select[i]['linear.weight'].numpy()[0]))
                         Lm_list.append(Lm_select[i]['linear.weight'])
                 else:
-                    Lm_user = init_Lm['linear.weight'].numpy()[0]
-                    Lm_list = [init_Lm['linear.weight']]
+                    # Lm_user = init_Lm['linear.weight'].numpy()[0]
+                    Lm_list = []
                     for i in indicator_cluster[cluster]:
                         if i != user:
-                            Lm_user = np.vstack((Lm_user, Lm_select[i]['linear.weight'].numpy()[0]))
+                            # Lm_user = np.vstack((Lm_user, Lm_select[i]['linear.weight'].numpy()[0]))
                             Lm_list.append(Lm_select[i]['linear.weight'])
                 if iter == 0:
                     local = LocalUpdate(args=args, dataset=dataset_train, idxs=dict_users[user])  # data select
                     net_glob.load_state_dict(init_w)
                     w, loss = local.train(net=copy.deepcopy(net_glob).to(args.device),
-                                             class_labels=num_label[user])
+                                          class_labels=num_label[user])
                     w_locals[user].append(copy.deepcopy(w))  # collect local model
                     loss_locals[user].append(copy.deepcopy(loss))  # collect local loss fucntion
                 else:
-                    # 计算Omega矩阵
-                    if len(Lm_list) > 1:
-                        S = sqrtm(np.dot(Lm_user, Lm_user.T))
-                        Omega = S / np.trace(S)
-                        Omega = np.linalg.inv(Omega)  # 可能出现为0的情况
-                        Omega = Omega[0, :]
-                        print(Omega)
-                    else:
-                        Omega = [1]
+                    # # 计算Omega矩阵
+                    # if len(Lm_list) > 1:
+                    #     S = sqrtm(np.dot(Lm_user, Lm_user.T))
+                    #     Omega = S / np.trace(S)
+                    #     Omega = np.linalg.inv(Omega)  # 可能出现为0的情况
+                    #     Omega = Omega[0, :]
+                    #     print(Omega)
+                    # else:
+                    #     Omega = [1]
 
                     local = LocalUpdate(args=args, dataset=dataset_train, idxs=dict_users[user])  # data select
                     net_glob.load_state_dict(init_w)
                     w, loss = local.train_Om(net=copy.deepcopy(net_glob).to(args.device),
-                                             class_labels=num_label[user], Lm=Lm_list, Omega=Omega, lambda_1=lambda_1)
+                                             class_labels=num_label[user], Lm=Lm_list, lambda_1=lambda_1)
                     w_locals[user].append(copy.deepcopy(w))  # collect local model
                     loss_locals[user].append(copy.deepcopy(loss))  # collect local loss fucntion
 
@@ -137,9 +137,3 @@ if __name__ == '__main__':
 
         print(indicator_user)
         print("iter=", iter, 'loss=', loss_locals)
-
-
-
-
-
-

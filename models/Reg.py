@@ -1,7 +1,8 @@
 import torch
 from torch import nn
 import torch.nn.functional as F
-
+import numpy as np
+from scipy.linalg import sqrtm
 
 class Regularization(nn.Module):
     def __init__(self, model, weight_decay, p):
@@ -55,17 +56,26 @@ class Regularization(nn.Module):
         :param weight_decay:
         :return:
         """
-        # weight_decay=Variable(torch.FloatTensor([weight_decay]).to(self.device),requires_grad=True)
-        # reg_loss=Variable(torch.FloatTensor([0.]).to(self.device),requires_grad=True)
-        # weight_decay=torch.FloatTensor([weight_decay]).to(self.device)
-        # reg_loss=torch.FloatTensor([0.]).to(self.device)
-        reg_loss = 0
 
-        Omega = weight_decay
+        reg_loss = 0
         Lm = p
 
         for name, w in weight_list:
             if name == 'linear.weight':
+                Lm_user = w.cpu().detach().numpy()[0]
+                for L in Lm:
+                    Lm_user = np.vstack((Lm_user, L.numpy()[0]))
+
+                # 计算Omega矩阵
+                if len(Lm) > 1:
+                    S = sqrtm(np.dot(Lm_user, Lm_user.T))
+                    Omega = S / np.trace(S)
+                    Omega = np.linalg.inv(Omega)  # 可能出现为0的情况
+                    Omega = Omega[0, :]
+                    print(Omega)
+                else:
+                    Omega = [1]
+
                 if len(Omega) > 0:
                     for i in range(len(Lm)):
                         l2_reg = 2 * Omega[i] * torch.mm(w, Lm[i].t())

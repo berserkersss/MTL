@@ -70,7 +70,7 @@ class LocalUpdate(object):
 
         return net.state_dict(), sum(epoch_loss) / len(epoch_loss)
 
-    def train_Om(self, net, class_labels, Lm, Omega, lambda_1, regu_loss):
+    def train_Om(self, net, class_labels, Lm, lambda_1):
         net.train()
         # train and update
         optimizer = torch.optim.SGD(net.parameters(), lr=self.args.lr, momentum=self.args.momentum)
@@ -81,7 +81,7 @@ class LocalUpdate(object):
             batch_loss = []
             batch_loss_MTL = []
             for batch_idx, (images, labels, img_idxs) in enumerate(self.ldr_train):
-                reg_loss = Regularization(net, Omega, p=Lm).to(self.args.device)
+                reg_loss = Regularization(net, 0.1, p=Lm).to(self.args.device)
 
                 # 标签转换
                 temp = labels
@@ -110,7 +110,7 @@ class LocalUpdate(object):
             epoch_loss.append(sum(batch_loss) / len(batch_loss))
             epoch_MTL_loss.append(sum(batch_loss_MTL) / len(batch_loss_MTL))
 
-        return net.state_dict(), sum(epoch_loss) / len(epoch_loss), epoch_MTL_loss/len(epoch_loss)
+        return net.state_dict(), sum(epoch_loss) / len(epoch_loss)
 
 
 class CLUpdate(object):

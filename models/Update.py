@@ -131,11 +131,21 @@ class CLUpdate(object):
         for iter in range(self.args.local_ep):
             batch_loss = []
             for batch_idx, (images, labels, img_idxs) in enumerate(self.cl_train):
+
+                # 标签转换
+                temp = labels
+                label_1 = (temp == class_labels[0]).nonzero()
+                temp[label_1] = 10
+                label_2 = (temp != 10).nonzero()
+                temp[label_2] = 0
+                temp[label_1] = 1
+
                 images, labels = images.to(self.args.device), labels.to(self.args.device)
                 # print(images.shape)
                 net.zero_grad()
-                log_probs = net(images)
-                loss = self.loss_func(log_probs, labels)
+                log_probs = net(images)  # predicted label
+                log_probs = log_probs.squeeze(dim=-1)
+                loss = self.loss_func(log_probs, labels.float())
                 loss.backward()
                 optimizer.step()
                 w_g = net.state_dict()

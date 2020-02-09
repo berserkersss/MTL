@@ -66,6 +66,7 @@ if __name__ == '__main__':
         accuracy = pd.read_csv(csv_path_accuracy, header=None)
         accuracy = accuracy.values
         x = np.arange(int((len(accuracy[0])) / 2)) * 2
+        # x = x[0: -1: 5]
         ax.plot(x, accuracy[0][x], c=colors[i], label=labels[i])
         ax.legend()
         plt.xlabel('Iterations')
@@ -84,14 +85,15 @@ if __name__ == '__main__':
     for i in range(num):
         csv_path_accuracy = 'result/CNN/' + 'Accuracy_' + labels[i] + '_CNN.csv'
         accuracy = pd.read_csv(csv_path_accuracy, header=None)
-        accuracy = accuracy.values
+        accuracy = accuracy.values.T
         x = np.arange(int((len(accuracy[0])) / 2)) * 2
+        x = x[0: -1: 5]
         ax.plot(x, accuracy[0][x], c=colors[i], label=labels[i])
         ax.legend()
         plt.xlabel('Iterations')
         plt.ylabel('Accuracy')
-        plt.savefig('Figure/Accuracy_CNN2.png')
-        plt.savefig('Figure/Accuracy_CNN2.eps')
+        plt.savefig('Figure/Accuracy_CNN.png')
+        plt.savefig('Figure/Accuracy_CNN.eps')
 
 
     # SVM

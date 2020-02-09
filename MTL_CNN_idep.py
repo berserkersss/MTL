@@ -35,7 +35,7 @@ if __name__ == '__main__':
     dataset_test = datasets.MNIST('../data/mnist/', train=False, download=True, transform=trans_mnist)
 
     # sample users
-    num_img = [2200, 2200, 2200, 2200, 2200, 2200]
+    num_img = [800, 800, 800, 800, 800, 800]
     num_label = [[0, -1], [0, -1], [1, -1], [1, -1], [2, -1], [3, -1]]
     lambda_1 = 0.000005
     dict_users = {}
@@ -58,14 +58,22 @@ if __name__ == '__main__':
     indicator_user = [i for i in range(len(num_img))]  # 指示用户属于哪一类
     Lm_select = [net_glob.state_dict() for i in range(len(num_img))]  # 存储用户选中簇的w（Lm）
 
+    w_idep = [copy.deepcopy(net_glob) for i in range(len(num_img))]
+
     acc_train_cl_his, acc_train_fl_his, acc_train_cl_his_iid = [], [], []
     acc_train_cl_his2, acc_train_fl_his2 = [], []
 
     acc_train = [[] for i in range(len(num_img))]
+    acc_train_idep = [[] for i in range(len(num_img))]
     for iter in range(args.epochs):  # num of iterations
         # CL setting
         w_locals, loss_locals = [[], [], [], [], [], []], [[], [], [], [], [], []]
         for user in range(len(num_img)):
+            # idep用户更新
+            local = CLUpdate(args=args, dataset=dataset_train, idxs=dict_users[user])  # data select
+            w_idep_temp, loss_idep = local.cltrain(net=w_idep[user].to(args.device), class_labels=num_label[user])
+            w_idep[user].load_state_dict(w_idep_temp)
+
             # 获取用户的Lm
             if iter == 0:
                 init_Lm = w_cluster[user]
@@ -151,9 +159,15 @@ if __name__ == '__main__':
             init_w['linear.bias'] = Lm_select[user]['linear.bias']
             net_test.load_state_dict(init_w)
             acc_test_fl2 = test_img(net_test, dataset_test, args, num_label[user])
-            print("user", user, "--Testing accuracy: {:.2f}".format(acc_test_fl2))
-            acc_train_fl_his2.append(acc_test_fl2)
+            print("cluster: user", user, "--Testing accuracy: {:.2f}".format(acc_test_fl2))
+            #acc_train_fl_his2.append(acc_test_fl2)
             acc_train[user].append(acc_test_fl2)
+
+            # 输出idep的结果
+            acc_test_fl2 = test_img(w_idep[user], dataset_test, args, num_label[user])
+            print("idep: user", user, "--Testing accuracy: {:.2f}".format(acc_test_fl2))
+            #acc_train_fl_his2.append(acc_test_fl2)
+            acc_train_idep[user].append(acc_test_fl2)
 
     print(acc_train)
     colors = ["navy", "red", "black", "orange", "violet", "blue"]
@@ -165,5 +179,46 @@ if __name__ == '__main__':
     ax.legend()
     plt.xlabel('Iterations')
     plt.ylabel('Accuracy')
-    plt.savefig('Accuracy.png')
+    plt.savefig('Figure/Accuracy.png')
+
+    print(acc_train_idep)
+    colors = ["navy", "red", "black", "orange", "violet", "blue"]
+    # labels = ["FedAvg_unbalance", "FedAvg_Optimize_unbalance", "FedAvg_balance", "FedAvg_Optimize_balance", "CL_iid", ""]
+    fig = plt.figure()
+    ax = fig.add_subplot(111)
+    for user in range(len(num_img)):
+        ax.plot(acc_train_idep[user], c=colors[user], label=str(user))
+    ax.legend()
+    plt.xlabel('Iterations')
+    plt.ylabel('Accuracy')
+    plt.savefig('Figure/Accuracy2.png')
+
+    print(acc_train_idep)
+    colors = ["navy", "red", "black", "orange", "violet", "blue"]
+    # labels = ["FedAvg_unbalance", "FedAvg_Optimize_unbalance", "FedAvg_balance", "FedAvg_Optimize_balance", "CL_iid", ""]
+    for user in range(len(num_img)):
+        fig = plt.figure()
+        ax = fig.add_subplot(111)
+        ax.plot(acc_train_idep[user], c=colors[0], label=str(user))
+        ax.plot(acc_train[user], c=colors[1], linestyle="dashed", label=str(user))
+        ax.legend()
+        plt.xlabel('Iterations')
+        plt.ylabel('Accuracy')
+        filename = 'Figure/' + "accuracy_c" + str(user) + ".png"
+        plt.savefig(filename)
+
+    filename = 'result/' + "accuracy.csv"
+    np.savetxt(filename, [])
+    filename = 'result/' + "accuracy_idep.csv"
+    np.savetxt(filename, [])
+
+    filename = 'result/' + "accuracy.csv"
+    for user in range(len(num_img)):
+        with open(filename, "a") as myfile:
+            myfile.write(str(max(acc_train[user])) + ',')
+
+    filename = 'result/' + "accuracy_idep.csv"
+    for user in range(len(num_img)):
+        with open(filename, "a") as myfile:
+            myfile.write(str(max(acc_train_idep[user])) + ',')
     # print("iter=", iter, 'loss=', loss_locals)

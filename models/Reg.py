@@ -64,7 +64,7 @@ class Regularization(nn.Module):
             if name == 'linear.weight':
                 Lm_user = w.cpu().detach().numpy()[0]
                 for L in Lm:
-                    Lm_user = np.vstack((Lm_user, L.numpy()[0]))
+                    Lm_user = np.vstack((Lm_user, L.cpu().numpy()[0]))
 
                 # 计算Omega矩阵
                 if len(Lm) > 1:
@@ -72,7 +72,6 @@ class Regularization(nn.Module):
                     Omega = S / np.trace(S)
                     Omega = np.linalg.inv(Omega)  # 可能出现为0的情况
                     Omega = Omega[0, :]
-                    print(Omega)
                 else:
                     Omega = [1]
 

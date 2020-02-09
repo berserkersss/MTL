@@ -24,8 +24,10 @@ def test_img(net_g, datatest, args, user_labels):
         temp[label_1] = 1
 
         target = temp
-        if args.gpu == -1:
-            data, target = data.cuda(), target.cuda()
+        # if args.gpu != -1:
+        #     data, target = data.cuda(), target.cuda()
+
+        data, target = data.to(args.device), target.to(args.device)
 
         log_probs = net_g(data)
         # sum up batch loss
@@ -40,6 +42,7 @@ def test_img(net_g, datatest, args, user_labels):
         temp[label_1] = 1
 
         y_pred = temp
+        target = target.float()
         correct += y_pred.eq(target.data.view_as(y_pred)).long().cpu().sum()
         break
 

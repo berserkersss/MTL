@@ -67,6 +67,25 @@ def cifar_iid(dataset, num_users):
         all_idxs = list(set(all_idxs) - dict_users[i])
     return dict_users
 
+def mnist_noniid(dataset_idx, num_label, num_img):
+    """
+    Sample non-I.I.D client data from MNIST dataset
+    """
+    dict_users = np.array([], dtype='int64')
+    for k in range(len(num_label)):
+        if num_label[k] >= 0:
+            idxs = np.where(np.array(dataset_idx[1, :]) == num_label[k])
+            idxs = idxs[0]
+        else:
+            idxs = dataset_idx[1, :]
+        rand_set = np.random.choice(idxs, num_img[k], replace=False)
+        train_idx = dataset_idx[0, :]
+
+        dict_users = np.concatenate((dict_users, train_idx[rand_set]), axis=0)
+
+        dataset_idx = np.delete(dataset_idx, rand_set, axis=1)
+
+    return dict_users, dataset_idx
 
 if __name__ == '__main__':
     dataset_train = datasets.MNIST('../data/mnist/', train=True, download=True,

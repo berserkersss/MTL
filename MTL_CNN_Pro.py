@@ -79,7 +79,7 @@ if __name__ == '__main__':
         num_label[0] = num_label[1]
         if num_label[0][0] == num_label[2][0]:
             num_label[2][0] = (num_label[0][0] + 1) % 10
-        num_label[2] = num_label[3]
+        num_label[3] = num_label[2]
         num_label[4][0] = (num_label[2][0] + 1) % 10
         num_label[5][0] = (num_label[4][0] + 1) % 10
 

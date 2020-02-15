@@ -16,13 +16,12 @@ from scipy.linalg import sqrtm
 import random
 import os
 
-from models.test import test_img_pro
 from Dataset_select import Mtl_sample
 from utils.sampling import mnist_iid, mnist_noniid, cifar_iid
 from utils.options import args_parser
 from models.Update import LocalUpdate
 from models.Update import CLUpdate
-from models.Nets import CNNMnist_MTL, CNNMnist, CNNCifar
+from models.Nets import CNNMnist_MTL, CNNMnist, CNNCifar, MLP_MTL
 from models.Fed import FedAvg
 from models.Fed import FedAvg_Optimize
 from models.test import test_img
@@ -44,24 +43,11 @@ if __name__ == '__main__':
     avg_acc = []
     avg_acc_idep = []
     avg_acc_fl = []
-
-    avg_acc2 = []
-    avg_acc_idep2 = []
-    avg_acc_fl2 = []
-
-    csv_path_test_label = 'data/test_label.csv'
-    y_all_train = pd.read_csv(csv_path_test_label, header=None)
-    y_all_train = y_all_train.values
-
-    total = 10000
-    idx_shard = [i for i in range(total)]
-    dataset_idx = np.vstack((idx_shard, y_all_train.T))
-
     for multi in range(num_avg):
 
         # sample users
         dict_users = {}
-        num_img_init = [1000, 1000, 1000, 1000, 1000, 1000]
+        num_img_init = [500, 500, 500, 500, 500, 500]
         num_label_init = [1, 1, 1, 1, 1, 1]
 
         num_img = [[] for i in range(args.num_users)]
@@ -80,14 +66,16 @@ if __name__ == '__main__':
         if num_label[0][0] == num_label[2][0]:
             num_label[2][0] = (num_label[0][0] + 1) % 10
         num_label[2] = num_label[3]
-        num_label[4][0] = (num_label[2][0] + 1) % 10
-        num_label[5][0] = (num_label[4][0] + 1) % 10
 
         print(num_label)
 
         dict_users = Mtl_sample(dict_users, num_label, num_img)
 
-        net_glob = CNNMnist_MTL(args=args).to(args.device)
+        img_size = dataset_train[0][0].shape
+        len_in = 1
+        for x in img_size:
+            len_in *= x
+        net_glob = MLP_MTL(dim_in=len_in, dim_hidden=320, dim_out=1).to(args.device)
         net_test = copy.deepcopy(net_glob)
         net_glob.train()
 
@@ -106,11 +94,7 @@ if __name__ == '__main__':
         acc_train_idep = [[] for i in range(len(num_img))]
         acc_train_fl = [[] for i in range(len(num_img))]
 
-        acc_train_2 = [[] for i in range(len(num_img))]
-        acc_train_idep_2 = [[] for i in range(len(num_img))]
-        acc_train_fl_2 = [[] for i in range(len(num_img))]
-
-        filename = 'result/CNN/' + str(multi)
+        filename = 'result/MLP/' + str(multi)
         if not os.path.exists(filename):
             os.mkdir(filename)
 
@@ -226,25 +210,18 @@ if __name__ == '__main__':
                 print("cluster: user", user, "--Testing accuracy: {:.2f}".format(acc_test_fl2))
                 # acc_train_fl_his2.append(acc_test_fl2)
                 acc_train[user].append(acc_test_fl2)
-                acc_test_fl2 = test_img_pro(net_test, dataset_test, args, num_label[user], dataset_idx)
-                acc_train_2[user].append(acc_test_fl2)
 
                 # 输出idep的结果
                 acc_test_fl2 = test_img(w_idep[user], dataset_test, args, num_label[user])
                 print("idep: user", user, "--Testing accuracy: {:.2f}".format(acc_test_fl2))
                 # acc_train_fl_his2.append(acc_test_fl2)
                 acc_train_idep[user].append(acc_test_fl2)
-                acc_test_fl2 = test_img_pro(w_idep[user], dataset_test, args, num_label[user], dataset_idx)
-                print("idep2: user", user, "--Testing accuracy: {:.2f}".format(acc_test_fl2))
-                acc_train_idep_2[user].append(acc_test_fl2)
 
                 # 输出FL的结果
                 acc_test_fl = test_img(w_fl[user], dataset_test, args, num_label[user])
                 print("FL : user", user, "--Testing accuracy: {:.2f}".format(acc_test_fl))
                 # acc_train_fl_his2.append(acc_test_fl)
                 acc_train_fl[user].append(acc_test_fl)
-                acc_test_fl2 = test_img_pro(w_fl[user], dataset_test, args, num_label[user], dataset_idx)
-                acc_train_fl_2[user].append(acc_test_fl2)
 
         print(acc_train)
         colors = ["navy", "red", "black", "orange", "violet", "blue"]
@@ -282,16 +259,14 @@ if __name__ == '__main__':
         plt.ylabel('Accuracy')
         plt.savefig('Figure/Accuracy_fl.png')
 
-
-        # 存储一般test
-        filename = 'result/CNN/' + str(multi) + "/accuracy.csv"
+        filename = 'result/MLP/' + str(multi) + "/accuracy.csv"
         np.savetxt(filename, [])
-        filename = 'result/CNN/' + str(multi) + "/accuracy_idep.csv"
+        filename = 'result/MLP/' + str(multi) + "/accuracy_idep.csv"
         np.savetxt(filename, [])
-        filename = 'result/CNN/' + str(multi) + "/accuracy_fl.csv"
+        filename = 'result/MLP/' + str(multi) + "/accuracy_fl.csv"
         np.savetxt(filename, [])
 
-        filename = 'result/CNN/' + str(multi) + "/accuracy.csv"
+        filename = 'result/MLP/' + str(multi) + "/accuracy.csv"
         avg = 0
         for user in range(len(num_img)):
             with open(filename, "a") as myfile:
@@ -302,7 +277,7 @@ if __name__ == '__main__':
         avg_acc.append(avg)
 
         avg = 0
-        filename = 'result/CNN/' + str(multi) + "/accuracy_idep.csv"
+        filename = 'result/MLP/' + str(multi) + "/accuracy_idep.csv"
         for user in range(len(num_img)):
             with open(filename, "a") as myfile:
                 myfile.write(str(max(acc_train_idep[user])) + ',')
@@ -312,7 +287,7 @@ if __name__ == '__main__':
         avg_acc_idep.append(avg)
 
         avg = 0
-        filename = 'result/CNN/' + str(multi) + "/accuracy_fl.csv"
+        filename = 'result/MLP/' + str(multi) + "/accuracy_fl.csv"
         for user in range(len(num_img)):
             with open(filename, "a") as myfile:
                 myfile.write(str(max(acc_train_fl[user])) + ',')
@@ -321,53 +296,9 @@ if __name__ == '__main__':
             myfile.write(str(avg) + ',')
         avg_acc_fl.append(avg)
 
-        filename = 'result/CNN/' + str(multi) + "/accuracy2.csv"
-        np.savetxt(filename, [])
-        filename = 'result/CNN/' + str(multi) + "/accuracy_idep2.csv"
-        np.savetxt(filename, [])
-        filename = 'result/CNN/' + str(multi) + "/accuracy_fl2.csv"
-        np.savetxt(filename, [])
-
-        filename = 'result/CNN/' + str(multi) + "/accuracy2.csv"
-        avg = 0
-        for user in range(len(num_img)):
-            with open(filename, "a") as myfile:
-                myfile.write(str(max(acc_train_2[user])) + ',')
-            avg += max(acc_train_2[user]) / len(num_img)
-        with open(filename, "a") as myfile:
-            myfile.write(str(avg) + ',')
-        avg_acc2.append(avg)
-
-        avg = 0
-        filename = 'result/CNN/' + str(multi) + "/accuracy_idep2.csv"
-        for user in range(len(num_img)):
-            with open(filename, "a") as myfile:
-                myfile.write(str(max(acc_train_idep_2[user])) + ',')
-            avg += max(acc_train_idep_2[user]) / len(num_img)
-        with open(filename, "a") as myfile:
-            myfile.write(str(avg) + ',')
-        avg_acc_idep2.append(avg)
-
-        avg = 0
-        filename = 'result/CNN/' + str(multi) + "/accuracy_fl2.csv"
-        for user in range(len(num_img)):
-            with open(filename, "a") as myfile:
-                myfile.write(str(max(acc_train_fl_2[user])) + ',')
-            avg += max(acc_train_fl_2[user]) / len(num_img)
-        with open(filename, "a") as myfile:
-            myfile.write(str(avg) + ',')
-        avg_acc_fl2.append(avg)
-
-    filename = 'result/CNN/' + "accuracy.csv"
+    filename = 'result/MLP/' + "accuracy.csv"
     np.savetxt(filename, avg_acc)
-    filename = 'result/CNN/' + "accuracy_idep.csv"
+    filename = 'result/MLP/' + "accuracy_idep.csv"
     np.savetxt(filename, avg_acc_idep)
-    filename = 'result/CNN/' + "accuracy_fl.csv"
+    filename = 'result/MLP/' + "accuracy_fl.csv"
     np.savetxt(filename, avg_acc_fl)
-
-    filename = 'result/CNN/' + "accuracy2.csv"
-    np.savetxt(filename, avg_acc2)
-    filename = 'result/CNN/' + "accuracy_idep2.csv"
-    np.savetxt(filename, avg_acc_idep2)
-    filename = 'result/CNN/' + "accuracy_fl2.csv"
-    np.savetxt(filename, avg_acc_fl2)
